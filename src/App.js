@@ -6,23 +6,25 @@ const App = () => {
   const [velocity, setVelocity] = useState(0);
   const [obstacles, setObstacles] = useState([]);
   const [gameOver, setGameOver] = useState(false);
-  const [speed, setSpeed] = useState(13);
+  const [speed, setSpeed] = useState(8);
   const [score, setScore] = useState(0);
+  const [canJump, setCanJump] = useState(true); // Состояние для ограничения прыжков
 
   const gameAreaHeight = 300;
   const gameAreaWidth = 800;
   const playerSize = 30;
   const gravity = 1;
-  const jumpStrength = -12;
+  const jumpStrength = -20;
   const obstacleGap = 200;
 
   const handleKeyDown = (event) => {
-    if (event.code === 'Space' && !gameOver) { // Игрок может прыгать только если игра не закончена
+    if (event.code === 'Space' && !gameOver && canJump) { // Игрок может прыгать только если есть возможность
       setVelocity(jumpStrength);
+      setCanJump(false); // Запрещаем следующий прыжок, пока не приземлимся
     }
   };
 
-  // Создаем препятствия
+  // Создаем препятствия с более коротким интервалом
   useEffect(() => {
     const intervalId = setInterval(() => {
       setObstacles((obs) => {
@@ -34,7 +36,7 @@ const App = () => {
         }
         return obs;
       });
-    }, 1500);
+    }, 1000); // Уменьшаем интервал до 1 секунды
 
     return () => clearInterval(intervalId);
   }, []);
@@ -62,8 +64,14 @@ const App = () => {
     return () => clearInterval(intervalId);
   }, [velocity]);
 
-  // Проверка на столкновения и увеличение счета
+  // Проверка на столкновения, увеличение счета и проверка на приземление
   useEffect(() => {
+    if (playerY >= gameAreaHeight - playerSize) {
+      setPlayerY(gameAreaHeight - playerSize); // Приземляем игрока
+      setVelocity(0); // Обнуляем скорость после приземления
+      setCanJump(true); // Разрешаем следующий прыжок
+    }
+
     obstacles.forEach((obstacle) => {
       if (
         obstacle.x < 50 + playerSize &&
@@ -88,20 +96,33 @@ const App = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [gameOver]);
+  }, [gameOver, canJump]);
 
   if (gameOver) {
-    return <h1>Помер! Счет: {score}</h1>;
+    return <h1 style={{ color: 'red' }}>Game Over! Score: {score}</h1>;
   }
 
   return (
     <div
       className="game-area"
-      style={{ width: gameAreaWidth, height: gameAreaHeight, position: 'relative', backgroundColor: '#000000' }}
+      style={{
+        width: gameAreaWidth,
+        height: gameAreaHeight,
+        position: 'relative',
+        backgroundColor: 'black', // Черный фон для области игры
+      }}
     >
       {/* Отображаем счет */}
-      <div style={{ position: 'absolute', top: 10, left: 10, fontSize: '20px' }}>
-        Счет: {score}
+      <div
+        style={{
+          position: 'absolute',
+          top: 10,
+          left: 10,
+          fontSize: '20px',
+          color: 'green', // Пурпурный цвет для счета
+        }}
+      >
+        Score: {score}
       </div>
 
       {/* Игрок */}
@@ -113,7 +134,7 @@ const App = () => {
           left: 50,
           width: playerSize,
           height: playerSize,
-          backgroundColor: '#800080',
+          backgroundColor: 'violet', // Фиолетовый игрок
         }}
       />
 
@@ -132,7 +153,7 @@ const App = () => {
         >
           <polygon
             points={`0,${obstacle.height} ${obstacle.width / 2},0 ${obstacle.width},${obstacle.height}`}
-            fill="red"
+            fill="red" // Красные препятствия
           />
         </svg>
       ))}
